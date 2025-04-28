@@ -1,0 +1,6 @@
+# Ignore binary files and temporary files
+bin/
+*.exe
+*.log
+*.out
+*.env
