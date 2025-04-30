@@ -12,5 +12,7 @@ Backend server for the Kava Life ERP system.
 ## 🚀 How to Run
 
 ```bash
+To install:
+    go mod tidy
 To run code:
     go run cmd/server/main.go
