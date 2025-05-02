@@ -8,7 +8,12 @@ import (
 )
 
 type Config struct {
-	Port string
+	Port    string 
+	DB_USER string
+	DB_PASS string
+	DB_NAME string
+	DB_HOST string
+	DB_PORT string
 }
 
 func ConfigLoader() Config {
@@ -22,5 +27,10 @@ func ConfigLoader() Config {
 
 	// Access environment variables
 	config.Port = os.Getenv("PORT")
+	config.DB_USER = os.Getenv("DB_USER")
+	config.DB_HOST = os.Getenv("DB_HOST")
+	config.DB_NAME = os.Getenv("DB_NAME")
+	config.DB_PORT = os.Getenv("DB_PORT")
+	config.DB_PASS = os.Getenv("DB_PASS")
 	return config
 }
