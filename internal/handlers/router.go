@@ -14,7 +14,7 @@ func SetupRouter() *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(config.GinLoggerMiddleware()) // default logger
 	r.Use(CORSMiddleware())             //CORS might need to update for prod
-	r.Use(LoggerMiddleware())           //logger
+	// r.Use(LoggerMiddleware())           //logger
 	// rewrite logic for setting up paths
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Welcome to Kava Life ERP Backend (Gin Setup)"})

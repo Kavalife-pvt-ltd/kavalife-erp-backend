@@ -15,7 +15,7 @@ func GinLoggerMiddleware() gin.HandlerFunc {
 
 		latency := time.Since(start)
 
-		Log.WithFields(map[string]interface{}{
+		Log.WithFields(map[string]any{
 			"status":   c.Writer.Status(),
 			"method":   c.Request.Method,
 			"path":     path,
