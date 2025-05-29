@@ -1,17 +1,29 @@
 package main
 
 import (
-	"log"
-
 	"github.com/paaart/kavalife-erp-backend/internal/config"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/handlers"
 )
 
 func main() {
-	config := config.ConfigLoader()
-	db.Connect(config) // connection to postgres
+	//Initialize logger
+	config.InitLogger()
+	config.Log.Info("Starting Kava Life ERP Backend...")
+
+	// Load configuration and connect to the database
+	appConfig := config.ConfigLoader()
+	config.Log.Info("Configuration loaded successfully", appConfig.DB_URL)
+
+	// Connect to the database
+	db.Connect(appConfig) // connection to postgres
+	config.Log.Info("Database connection established successfully")
+
+	// Set up the router and start the server
 	r := handlers.SetupRouter()
-	log.Println("Server will run on port:", config.Port)
-	r.Run(":" + config.Port) // Listen and serve on port 8080
+
+	config.Log.Info("Server will run on port:", appConfig.Port)
+	if err := r.Run(":" + appConfig.Port); err != nil {
+		config.Log.Fatal("Failed to run server:", err)
+	}
 }
