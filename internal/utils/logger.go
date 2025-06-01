@@ -1,4 +1,4 @@
-package config
+package util
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 var Log *logrus.Logger
 
-func InitLogger() {
+func InitLogger() *logrus.Logger {
 	Log = logrus.New()
 
 	Log.SetOutput(os.Stdout)
@@ -18,4 +18,5 @@ func InitLogger() {
 	})
 
 	Log.SetLevel(logrus.InfoLevel)
+	return Log
 }
