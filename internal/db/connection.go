@@ -4,16 +4,17 @@ import (
 	"context"
 	"log"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/paaart/kavalife-erp-backend/internal/config"
 )
 
-func Connect(config config.Config) {
-	conn, err := pgx.Connect(context.Background(), config.DB_URL)
+var DB *pgxpool.Pool
+
+func Connect(config config.Config) (*pgxpool.Pool, error) {
+	conn, err := pgxpool.New(context.Background(), config.DB_URL)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
-	defer conn.Close(context.Background())
 
 	// Example query to test connection
 	var version string
@@ -22,4 +23,6 @@ func Connect(config config.Config) {
 	}
 
 	log.Println("Postgres Connected to:", version)
+	DB = conn
+	return conn, err
 }
