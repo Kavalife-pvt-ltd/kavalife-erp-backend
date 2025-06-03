@@ -1,4 +1,4 @@
-package handlers
+package services
 
 import (
 	"log"
@@ -6,18 +6,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
-	"github.com/paaart/kavalife-erp-backend/internal/models"
+	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
-func AllUsers(c *gin.Context) {
-	rows, err := db.DB.Query(c, "select * FROM users")
+// need discusion over auth
+// this is auth Users table with 2 email
+func GetAuthUsers(c *gin.Context) {
+
+	rows, err := db.DB.Query(c, "select * FROM auth.Users")
 	if err != nil {
-		c.JSON(200, map[string]any{
-			"error": err.Error(),
-		})
+		utils.SuccessWithError(c, err)
+		return
 	}
 	defer rows.Close()
-	var users []models.User
+	var users []map[string]any
 	for rows.Next() {
 		values, err := rows.Values()
 		if err != nil {
@@ -32,7 +34,7 @@ func AllUsers(c *gin.Context) {
 			rowMap[colName] = val
 		}
 
-		var user models.User
+		var user map[string]any
 		if err := mapstructure.Decode(rowMap, &user); err != nil {
 			log.Printf("Failed to decode: %v", err)
 			continue
@@ -40,6 +42,6 @@ func AllUsers(c *gin.Context) {
 
 		users = append(users, user)
 	}
-	c.JSON(200, users)
+	utils.SuccessWithData(c, users)
 
 }
