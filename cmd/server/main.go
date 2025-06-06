@@ -5,9 +5,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/paaart/kavalife-erp-backend/internal"
 	"github.com/paaart/kavalife-erp-backend/internal/config"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
+	"github.com/paaart/kavalife-erp-backend/internal/handlers"
 	util "github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	defer pool.Close()
 
 	Log.Info("Starting Kava Life ERP Backend...")
-	r := internal.RunApp()
+	r := handlers.RunApp()
 
 	// Graceful shutdown on interrupt
 	quit := make(chan os.Signal, 1)

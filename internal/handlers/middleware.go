@@ -1,10 +1,15 @@
-package internal
+package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/paaart/kavalife-erp-backend/internal/handlers"
+	"github.com/paaart/kavalife-erp-backend/internal/db"
+
+	"github.com/paaart/kavalife-erp-backend/internal/models"
+	"github.com/paaart/kavalife-erp-backend/internal/utils"
 	util "github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
@@ -13,7 +18,7 @@ func RunApp() *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(GinLoggerMiddleware()) // default logger
 	r.Use(CORSMiddleware())      //CORS might need to update for prod
-	handlers.Routes(r)
+	Routes(r)
 	return r
 }
 
@@ -49,5 +54,37 @@ func GinLoggerMiddleware() gin.HandlerFunc {
 			"latency":  latency,
 			"clientIP": c.ClientIP(),
 		}).Info("Request processed")
+	}
+}
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userId, err := c.Cookie("usrCookie")
+		if err != nil {
+			// Cookie is missing or expired
+			utils.StatusUnauthorized(c, errors.New("Session expired or not logged in"))
+			c.Abort()
+			return
+		}
+		jwtValidate, bool := utils.ValidateJWT(userId)
+		if !bool {
+			utils.StatusUnauthorized(c, errors.New("user not valid"))
+			c.Abort()
+			return
+		}
+		var user models.User
+		err = db.DB.QueryRow(c, `SELECT id, username, role FROM public.users WHERE username=$1`, jwtValidate["username"]).
+			Scan(&user.ID, &user.Username, &user.Role)
+		if err == sql.ErrNoRows {
+			utils.StatusUnauthorized(c, errors.New("Invalid username or password"))
+			return
+		} else if err != nil {
+			utils.StatusInternalServerError(c, errors.New("Database error"))
+			return
+		}
+
+		c.Set("username", user.Username)
+		c.Set("id", user.ID)
+		c.Next()
 	}
 }
