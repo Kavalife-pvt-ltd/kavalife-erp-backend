@@ -8,11 +8,10 @@ import (
 func Routes(r *gin.Engine) {
 
 	api := r.Group("/api")
-
-	api.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
-	})
-	api.GET("/allUsers", services.AllUsers)
-	api.POST("/getOneUser", services.GetOneUser)
-	api.GET("/authUsersList", services.GetAuthUsers)
+	userRoutes := r.Group("/user") //user api
+	userRoutes.Use(AuthMiddleware())
+	userRoutes.GET("/allUsers", services.AllUsers)
+	userRoutes.POST("/getOneUser", services.GetOneUser)
+	api.POST("/login", services.UserLogin)
+	// api.GET("/authUsersList", services.GetAuthUsers)
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
@@ -67,5 +68,31 @@ func GetOneUser(c *gin.Context) {
 		utils.SuccessWithError(c, errors.New("Invalid username or password"))
 		return
 	}
+	utils.SuccessWithData(c, user)
+}
+
+func UserLogin(c *gin.Context) {
+	var req models.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, errors.New("Invalid JSON input"))
+		return
+	}
+	var user models.User
+	err := db.DB.QueryRow(c, `SELECT id, username, role, password FROM public.users WHERE username=$1`, req.Username).
+		Scan(&user.ID, &user.Username, &user.Role, &user.Password)
+
+	if err == sql.ErrNoRows {
+		utils.StatusUnauthorized(c, errors.New("Invalid username or password"))
+		return
+	} else if err != nil {
+		utils.StatusInternalServerError(c, errors.New("Database error"))
+		return
+	}
+	if err := utils.CheckPasswordHash(req.Password, user.Password); !err {
+		utils.SuccessWithError(c, errors.New("Invalid username or password"))
+		return
+	}
+	token, _ := utils.CreateJWT(user.Username, 24*time.Hour) //creating token
+	c.SetCookie("usrCookie", token, 86400, "/", "", true, true)
 	utils.SuccessWithData(c, user)
 }

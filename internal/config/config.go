@@ -8,21 +8,31 @@ import (
 )
 
 type Config struct {
-	Port   string
-	DB_URL string
+	Port       string
+	DB_URL     string
+	JWT_SECRET string
 }
 
 func ConfigLoader() Config {
-	//
-	config := Config{}
-	// Load .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, falling back to system env")
+	}
+	cfg := &Config{
+		Port:       getEnv("PORT", "8080"),
+		DB_URL:     getEnv("DB_URL", ""),
+		JWT_SECRET: getEnv("JWT_SECRET", ""),
 	}
 
-	// Access environment variables
-	config.Port = os.Getenv("PORT")
-	config.DB_URL = os.Getenv("DB_URL")
-	return config
+	if cfg.JWT_SECRET == "" {
+		log.Fatal("JWT_SECRET must be set")
+	}
+
+	return *cfg
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
