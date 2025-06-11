@@ -8,10 +8,10 @@ import (
 func Routes(r *gin.Engine) {
 
 	api := r.Group("/api")
-	userRoutes := r.Group("/user") //user api
-	userRoutes.Use(AuthMiddleware())
-	userRoutes.GET("/allUsers", services.AllUsers)
-	userRoutes.POST("/getOneUser", services.GetOneUser)
 	api.POST("/login", services.UserLogin)
+
+	userRoutes := r.Group("/user").Use(AuthMiddleware())
+	userRoutes.GET("/allUsers", services.AllUsers)
+
 	// api.GET("/authUsersList", services.GetAuthUsers)
 }
