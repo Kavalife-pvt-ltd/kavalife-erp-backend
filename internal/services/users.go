@@ -96,3 +96,36 @@ func UserLogin(c *gin.Context) {
 	c.SetCookie("usrCookie", token, 86400, "/", "", true, true)
 	utils.SuccessWithData(c, user)
 }
+
+func CheckUser(c *gin.Context) {
+	userToken, err := c.Cookie("usrCookie")
+	if err != nil {
+		utils.StatusUnauthorized(c, errors.New("Not logged in"))
+		return
+	}
+
+	claims, valid := utils.ValidateJWT(userToken)
+	if !valid {
+		utils.StatusUnauthorized(c, errors.New("Invalid or expired session"))
+		return
+	}
+
+	var user models.LoggedUserDetails
+	err = db.DB.QueryRow(c, `SELECT id, username, role FROM public.users WHERE username=$1`, claims["username"]).
+		Scan(&user.ID, &user.Username, &user.Role)
+	if err == sql.ErrNoRows {
+		utils.StatusUnauthorized(c, errors.New("User not found"))
+		return
+	} else if err != nil {
+		utils.StatusInternalServerError(c, errors.New("Database error"))
+		return
+	}
+
+	utils.SuccessWithData(c, user)
+}
+
+func Logout(c *gin.Context) {
+	// Set the cookie with MaxAge -1 to delete
+	c.SetCookie("usrCookie", "", -1, "/", "", true, true)
+	utils.SuccessWithData(c, "Logged out successfully")
+}

@@ -11,7 +11,8 @@ func Routes(r *gin.Engine) {
 	userRoutes := r.Group("/user") //user api
 	userRoutes.Use(AuthMiddleware())
 	userRoutes.GET("/allUsers", services.AllUsers)
-	userRoutes.POST("/getOneUser", services.GetOneUser)
 	api.POST("/login", services.UserLogin)
+	api.GET("/checkUser", services.CheckUser)
+	api.POST("/logout", services.Logout)
 	// api.GET("/authUsersList", services.GetAuthUsers)
 }
