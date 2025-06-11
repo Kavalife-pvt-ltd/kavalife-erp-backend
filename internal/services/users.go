@@ -110,7 +110,7 @@ func CheckUser(c *gin.Context) {
 		return
 	}
 
-	var user models.User
+	var user models.LoggedUserDetails
 	err = db.DB.QueryRow(c, `SELECT id, username, role FROM public.users WHERE username=$1`, claims["username"]).
 		Scan(&user.ID, &user.Username, &user.Role)
 	if err == sql.ErrNoRows {
