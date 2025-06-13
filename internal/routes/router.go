@@ -19,5 +19,5 @@ func Routes(r *gin.Engine) {
 
 	productRoutes.GET("/allProducts", services.AllProducts)
 	productRoutes.POST("/insertProduct", services.InsertProduct)
-	// productRoutes.PUT("/updateProduct")
+	productRoutes.POST("/updateProduct", services.UpdateProduct)
 }

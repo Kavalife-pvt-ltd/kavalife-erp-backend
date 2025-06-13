@@ -1,16 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"log"
 
-	"github.com/gin-gonic/gin"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
-func AllProductsData(c *gin.Context) ([]models.Product, error) {
+func AllProductsData(c context.Context) ([]models.Product, error) {
 	var products []models.Product
 	var err error
 	rows, err := db.DB.Query(c, "select id, name, quantity, userid FROM public.products")
@@ -34,7 +34,7 @@ func AllProductsData(c *gin.Context) ([]models.Product, error) {
 	return products, nil
 }
 
-func AddProduct(c *gin.Context, req models.Product) error {
+func AddProduct(c context.Context, req models.Product) error {
 	// Normalize name to lowercase with no spaces
 	nameHash := utils.ToLowerNoSpaces(req.Name)
 
@@ -57,5 +57,21 @@ func AddProduct(c *gin.Context, req models.Product) error {
 		return err
 	}
 
+	return nil
+}
+
+func UpdateProductQuantityAndUser(ctx context.Context, productID int, quantity float64, userID int) error {
+	query := `UPDATE public.products 
+	          SET quantity = $1, userid = $2 
+	          WHERE id = $3`
+
+	result, err := db.DB.Exec(ctx, query, quantity, userID, productID)
+	if err != nil {
+		return err
+	}
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("product not found")
+	}
 	return nil
 }

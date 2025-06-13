@@ -6,12 +6,11 @@ import (
 	"errors"
 	"log"
 
-	"github.com/gin-gonic/gin"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 )
 
-func AllUsers(c *gin.Context) ([]models.User, error) {
+func AllUsers(c context.Context) ([]models.User, error) {
 	var users []models.User
 	var err error
 	rows, err := db.DB.Query(c, "select id, username, created_at, role, phone_num FROM public.users")

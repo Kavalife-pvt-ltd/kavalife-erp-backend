@@ -7,3 +7,8 @@ type Product struct {
 	UserId   int     `mapstructure:"userId" json:"userId"`
 	Namehash string  `mapstructure:"namehash" json:"namehash,omitempty"`
 }
+
+var ProductUpdate struct {
+	ID       int     `mapstructure:"id" json:"id"`
+	Quantity float64 `mapstructure:"quantity" json:"quantity"`
+}

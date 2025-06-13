@@ -46,3 +46,32 @@ func InsertProduct(c *gin.Context) {
 
 	utils.SuccessWithData(c, "data inserted")
 }
+
+func UpdateProduct(c *gin.Context) {
+
+	req := models.ProductUpdate
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, errors.New("invalid input data"))
+		return
+	}
+	// Get user ID from context
+	userID, exists := c.Get("id")
+	if !exists {
+		utils.BadRequest(c, errors.New("user ID not found in context"))
+		return
+	}
+	uid, ok := userID.(int)
+	if !ok {
+		utils.BadRequest(c, errors.New("invalid user ID format"))
+		return
+	}
+
+	// Call DB function to update
+	err := handlers.UpdateProductQuantityAndUser(c, req.ID, req.Quantity, uid)
+	if err != nil {
+		utils.StatusInternalServerError(c, err)
+		return
+	}
+
+	utils.SuccessWithData(c, "product updated successfully")
+}
