@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/paaart/kavalife-erp-backend/internal/config"
+	"github.com/paaart/kavalife-erp-backend/config"
 )
 
 var jwtSecret = []byte(config.ConfigLoader().JWT_SECRET)

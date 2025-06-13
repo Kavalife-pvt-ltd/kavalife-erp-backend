@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/paaart/kavalife-erp-backend/internal/config"
+	"github.com/paaart/kavalife-erp-backend/config"
 )
 
 var DB *pgxpool.Pool
