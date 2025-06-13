@@ -9,8 +9,9 @@ import (
 
 var jwtSecret = []byte(config.ConfigLoader().JWT_SECRET)
 
-func CreateJWT(username string, tokenDuration time.Duration) (string, error) {
+func CreateJWT(id int, username string, tokenDuration time.Duration) (string, error) {
 	claims := jwt.MapClaims{
+		"id":       id,
 		"username": username,
 		"exp":      time.Now().Add(tokenDuration).Unix(),
 		"iat":      time.Now().Unix(),
