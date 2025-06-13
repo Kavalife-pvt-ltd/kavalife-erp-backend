@@ -7,7 +7,7 @@ type User struct {
 	Username   string    `mapstructure:"username" json:"username"`
 	Created_at time.Time `mapstructure:"created_at" json:"created_at"`
 	Role       string    `mapstructure:"role" json:"role"`
-	Password   string    `mapstructure:"password" json:"password"`
+	Password   string    `mapstructure:"password" json:"password,omitempty"`
 	Phone_Num  int       `mapstructure:"phone_num" json:"phone_num"`
 }
 

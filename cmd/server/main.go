@@ -7,7 +7,7 @@ import (
 
 	"github.com/paaart/kavalife-erp-backend/internal/config"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
-	"github.com/paaart/kavalife-erp-backend/internal/handlers"
+	"github.com/paaart/kavalife-erp-backend/internal/routes"
 	util "github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	defer pool.Close()
 
 	Log.Info("Starting Kava Life ERP Backend...")
-	r := handlers.RunApp()
+	r := routes.RunApp()
 
 	// Graceful shutdown on interrupt
 	quit := make(chan os.Signal, 1)
