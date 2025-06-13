@@ -1,4 +1,4 @@
-package handlers
+package routes
 
 import (
 	"database/sql"
@@ -9,8 +9,8 @@ import (
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 
 	"github.com/paaart/kavalife-erp-backend/internal/models"
+
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
-	util "github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
 func RunApp() *gin.Engine {
@@ -46,7 +46,7 @@ func GinLoggerMiddleware() gin.HandlerFunc {
 		c.Next()
 
 		latency := time.Since(start)
-		l := util.InitLogger()
+		l := utils.InitLogger()
 		l.WithFields(map[string]any{
 			"status":   c.Writer.Status(),
 			"method":   c.Request.Method,
@@ -62,7 +62,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		userId, err := c.Cookie("usrCookie")
 		if err != nil {
 			// Cookie is missing or expired
-			utils.StatusUnauthorized(c, errors.New("Session expired or not logged in"))
+			utils.StatusUnauthorized(c, errors.New("session expired or not logged in"))
 			c.Abort()
 			return
 		}
@@ -76,10 +76,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		err = db.DB.QueryRow(c, `SELECT id, username, role FROM public.users WHERE username=$1`, jwtValidate["username"]).
 			Scan(&user.ID, &user.Username, &user.Role)
 		if err == sql.ErrNoRows {
-			utils.StatusUnauthorized(c, errors.New("Invalid username or password"))
+			utils.StatusUnauthorized(c, errors.New("invalid username or password"))
 			return
 		} else if err != nil {
-			utils.StatusInternalServerError(c, errors.New("Database error"))
+			utils.StatusInternalServerError(c, errors.New("database error"))
 			return
 		}
 

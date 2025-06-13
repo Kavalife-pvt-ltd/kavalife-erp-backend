@@ -7,14 +7,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
 func AllUsers(c *gin.Context) {
-	rows, err := db.DB.Query(c, "select * FROM users")
+	rows, err := db.DB.Query(c, "select id, username, created_at, role, phone_num FROM public.users")
 	if err != nil {
 		utils.SuccessWithError(c, err)
 		return
@@ -22,26 +21,18 @@ func AllUsers(c *gin.Context) {
 	defer rows.Close()
 	var users []models.User
 	for rows.Next() {
-		values, err := rows.Values()
+		var p models.User
+		err := rows.Scan(&p.ID, &p.Username, &p.Created_at, &p.Role, &p.Phone_Num) // Adjust based on your struct
 		if err != nil {
-			log.Printf("Failed to get values: %v", err)
+			log.Printf("Failed to scan product: %v", err)
 			continue
 		}
-		fieldDescriptions := rows.FieldDescriptions()
-		rowMap := make(map[string]interface{}, len(values))
+		users = append(users, p)
 
-		for i, val := range values {
-			colName := string(fieldDescriptions[i].Name)
-			rowMap[colName] = val
-		}
-
-		var user models.User
-		if err := mapstructure.Decode(rowMap, &user); err != nil {
-			log.Printf("Failed to decode: %v", err)
-			continue
-		}
-
-		users = append(users, user)
+	}
+	if err = rows.Err(); err != nil {
+		utils.SuccessWithError(c, err)
+		return
 	}
 	utils.SuccessWithData(c, users)
 
@@ -50,7 +41,7 @@ func AllUsers(c *gin.Context) {
 func GetOneUser(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, errors.New("Invalid JSON input"))
+		utils.BadRequest(c, errors.New("invalid JSON input"))
 		return
 	}
 	var user models.User
@@ -58,14 +49,14 @@ func GetOneUser(c *gin.Context) {
 		Scan(&user.ID, &user.Username, &user.Role, &user.Password)
 
 	if err == sql.ErrNoRows {
-		utils.StatusUnauthorized(c, errors.New("Invalid username or password"))
+		utils.StatusUnauthorized(c, errors.New("invalid username or password"))
 		return
 	} else if err != nil {
-		utils.StatusInternalServerError(c, errors.New("Database error"))
+		utils.StatusInternalServerError(c, errors.New("database error"))
 		return
 	}
 	if err := utils.CheckPasswordHash(req.Password, user.Password); !err {
-		utils.SuccessWithError(c, errors.New("Invalid username or password"))
+		utils.SuccessWithError(c, errors.New("invalid username or password"))
 		return
 	}
 	utils.SuccessWithData(c, user)
@@ -74,25 +65,26 @@ func GetOneUser(c *gin.Context) {
 func UserLogin(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, errors.New("Invalid JSON input"))
+		utils.BadRequest(c, errors.New("invalid JSON input"))
 		return
 	}
 	var user models.User
-	err := db.DB.QueryRow(c, `SELECT id, username, role, password FROM public.users WHERE username=$1`, req.Username).
-		Scan(&user.ID, &user.Username, &user.Role, &user.Password)
+	err := db.DB.QueryRow(c, `SELECT id, username, role, password, phone_num FROM public.users WHERE username=$1`, req.Username).
+		Scan(&user.ID, &user.Username, &user.Role, &user.Password, &user.Phone_Num)
 
 	if err == sql.ErrNoRows {
-		utils.StatusUnauthorized(c, errors.New("Invalid username or password"))
+		utils.StatusUnauthorized(c, errors.New("no data found"))
 		return
 	} else if err != nil {
-		utils.StatusInternalServerError(c, errors.New("Database error"))
+		utils.StatusInternalServerError(c, errors.New("query error"))
 		return
 	}
 	if err := utils.CheckPasswordHash(req.Password, user.Password); !err {
-		utils.SuccessWithError(c, errors.New("Invalid username or password"))
+		utils.SuccessWithError(c, errors.New("invalid username or password"))
 		return
 	}
 	token, _ := utils.CreateJWT(user.Username, 24*time.Hour) //creating token
 	c.SetCookie("usrCookie", token, 86400, "/", "", true, true)
+	user.Password = ""
 	utils.SuccessWithData(c, user)
 }
