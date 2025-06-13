@@ -15,3 +15,9 @@ type LoginRequest struct {
 	Username string `mapstructure:"username" json:"username" binding:"required"`
 	Password string `mapstructure:"password" json:"password" binding:"required"`
 }
+
+type LoggedUserDetails struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
