@@ -7,17 +7,21 @@ import (
 
 func Routes(r *gin.Engine) {
 
-	apiRoutes := r.Group("/api")                         //default api
-	userRoutes := r.Group("/user").Use(AuthMiddleware()) //user api
-	productRoutes := r.Group("/product").Use(AuthMiddleware())
+	apiRoutes := r.Group("/api")                               //default api
+	userRoutes := r.Group("/user").Use(AuthMiddleware())       //user api
+	productRoutes := r.Group("/product").Use(AuthMiddleware()) //products api
+	vendorRoutes := r.Group("/vendor").Use(AuthMiddleware())   //vendor api
 
 	apiRoutes.POST("/login", services.UserLogin)
 	apiRoutes.GET("/checkUser", services.CheckUser)
-	apiRoutes.POST("/logout", services.Logout)
+	// apiRoutes.POST("/logout", services.Logout)
 
 	userRoutes.GET("/allUsers", services.AllUsers)
+	userRoutes.GET("/logout", services.Logout)
 
 	productRoutes.GET("/allProducts", services.AllProducts)
 	productRoutes.POST("/insertProduct", services.InsertProduct)
 	productRoutes.POST("/updateProduct", services.UpdateProduct)
+
+	vendorRoutes.GET("allVendors", services.AllVendors)
 }

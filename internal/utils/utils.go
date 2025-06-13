@@ -1,6 +1,10 @@
 package utils
 
-import "strings"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
 
 func ToLowerNoSpaces(input string) string {
 	// Remove all spaces
@@ -20,4 +24,12 @@ func StringInSlice(target string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func PrettyPrint(x any) {
+	b, err := json.MarshalIndent(x, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Print(string(b))
 }
