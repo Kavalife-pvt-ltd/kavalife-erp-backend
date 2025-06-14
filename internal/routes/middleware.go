@@ -80,13 +80,15 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		var user models.User
-		err = db.DB.QueryRow(c, `SELECT id, username, role FROM public.users WHERE username=$1`, jwtValidate["username"]).
+		err = db.DB.QueryRow(c, `SELECT id, username, role FROM public.users WHERE id=$1`, jwtValidate["id"]).
 			Scan(&user.ID, &user.Username, &user.Role)
 		if err == sql.ErrNoRows {
 			utils.StatusUnauthorized(c, errors.New("invalid username or password"))
+			c.Abort()
 			return
 		} else if err != nil {
 			utils.StatusInternalServerError(c, errors.New("database error"))
+			c.Abort()
 			return
 		}
 

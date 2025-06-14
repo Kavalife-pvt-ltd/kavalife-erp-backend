@@ -2,36 +2,21 @@ package services
 
 import (
 	"errors"
-	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/paaart/kavalife-erp-backend/internal/db"
+	"github.com/paaart/kavalife-erp-backend/internal/handlers"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
 func AllProducts(c *gin.Context) {
-	rows, err := db.DB.Query(c, "select id, name, quantity, userid FROM public.products")
+	data, err := handlers.AllProductsData(c)
 	if err != nil {
 		utils.SuccessWithError(c, err)
 		return
 	}
-	defer rows.Close()
-	var products []models.Product
-	for rows.Next() {
-		var p models.Product
-		err := rows.Scan(&p.ID, &p.Name, &p.Quantity, &p.UserId) // Adjust based on your struct
-		if err != nil {
-			log.Printf("Failed to scan product: %v", err)
-			continue
-		}
-		products = append(products, p)
-	}
-	if err = rows.Err(); err != nil {
-		utils.SuccessWithError(c, err)
-		return
-	}
-	utils.SuccessWithData(c, products)
+	utils.SuccessWithData(c, data)
+
 }
 
 func InsertProduct(c *gin.Context) {
@@ -40,12 +25,53 @@ func InsertProduct(c *gin.Context) {
 		utils.BadRequest(c, errors.New("invalid JSON input"))
 		return
 	}
-	id, _ := c.Get("id")
-	req.UserId = id.(int)
-	err := db.DB.QueryRow(c, `insert into public.products(name, quantity, userid) Values ($1,$2,$3) returning id`, req.Name, req.Quantity, req.UserId).Scan(&req.ID)
-	if err != nil {
-		utils.SuccessWithError(c, err)
+	// Get user ID from context
+	userID, exists := c.Get("id")
+	if !exists {
+		utils.BadRequest(c, errors.New("user ID not found in context"))
 		return
 	}
-	log.Println("--data inserted--", req.ID)
+	uid, ok := userID.(int)
+	if !ok {
+		utils.BadRequest(c, errors.New("invalid user ID format"))
+		return
+	}
+	req.UserId = uid
+
+	err := handlers.AddProduct(c, req)
+	if err != nil {
+		utils.StatusInternalServerError(c, err)
+		return
+	}
+
+	utils.SuccessWithData(c, "data inserted")
+}
+
+func UpdateProduct(c *gin.Context) {
+
+	req := models.ProductUpdate
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, errors.New("invalid input data"))
+		return
+	}
+	// Get user ID from context
+	userID, exists := c.Get("id")
+	if !exists {
+		utils.BadRequest(c, errors.New("user ID not found in context"))
+		return
+	}
+	uid, ok := userID.(int)
+	if !ok {
+		utils.BadRequest(c, errors.New("invalid user ID format"))
+		return
+	}
+
+	// Call DB function to update
+	err := handlers.UpdateProductQuantityAndUser(c, req.ID, req.Quantity, uid)
+	if err != nil {
+		utils.StatusInternalServerError(c, err)
+		return
+	}
+
+	utils.SuccessWithData(c, "product updated successfully")
 }

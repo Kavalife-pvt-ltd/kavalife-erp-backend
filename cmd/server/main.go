@@ -5,7 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/paaart/kavalife-erp-backend/internal/config"
+	"github.com/paaart/kavalife-erp-backend/config"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/routes"
 	util "github.com/paaart/kavalife-erp-backend/internal/utils"
