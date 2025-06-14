@@ -24,4 +24,6 @@ func Routes(r *gin.Engine) {
 	productRoutes.POST("/updateProduct", services.UpdateProduct)
 
 	vendorRoutes.GET("allVendors", services.AllVendors)
+	vendorRoutes.POST("/insertVendor", services.InsertVendors)
+	// productRoutes.POST("/updateVendor", services.UpdateVendor)
 }

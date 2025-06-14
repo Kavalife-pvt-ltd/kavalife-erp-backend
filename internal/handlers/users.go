@@ -8,6 +8,7 @@ import (
 
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
+	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
 func AllUsers(c context.Context) ([]models.User, error) {
@@ -26,8 +27,8 @@ func AllUsers(c context.Context) ([]models.User, error) {
 			continue
 		}
 		users = append(users, p)
-
 	}
+	utils.SortByID(users, true)
 	if err = rows.Err(); err != nil {
 		return []models.User{}, err
 	}

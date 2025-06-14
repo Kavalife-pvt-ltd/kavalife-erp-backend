@@ -28,6 +28,7 @@ func AllProductsData(c context.Context) ([]models.Product, error) {
 		}
 		products = append(products, p)
 	}
+	utils.SortByID(products, true)
 	if err = rows.Err(); err != nil {
 		return []models.Product{}, err
 	}

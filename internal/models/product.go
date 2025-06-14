@@ -12,3 +12,7 @@ var ProductUpdate struct {
 	ID       int     `mapstructure:"id" json:"id"`
 	Quantity float64 `mapstructure:"quantity" json:"quantity"`
 }
+
+func (v Product) GetID() int {
+	return v.ID
+}

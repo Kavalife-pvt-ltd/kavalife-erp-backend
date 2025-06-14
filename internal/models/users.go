@@ -21,3 +21,7 @@ type LoggedUserDetails struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
 }
+
+func (v User) GetID() int {
+	return v.ID
+}

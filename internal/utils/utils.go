@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -32,4 +33,19 @@ func PrettyPrint(x any) {
 		fmt.Println("error:", err)
 	}
 	fmt.Print(string(b))
+}
+
+// HasID interface for structs with an ID field
+type HasID interface {
+	GetID() int
+}
+
+// SortByID sorts any slice of HasID by ID (ascending or descending)
+func SortByID[T HasID](items []T, ascending bool) {
+	sort.Slice(items, func(i, j int) bool {
+		if ascending {
+			return items[i].GetID() < items[j].GetID()
+		}
+		return items[i].GetID() > items[j].GetID()
+	})
 }
