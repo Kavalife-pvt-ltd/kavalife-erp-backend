@@ -200,7 +200,7 @@ func UpdateVIRVerification(ctx context.Context, virNumber string, req models.Ver
 		WHERE vir_number = $4
 	`
 
-	tag, err := db.DB.Exec(ctx, query, req.CheckedBy.Data.ID, checkedAt, "checked", virNumber)
+	tag, err := db.DB.Exec(ctx, query, req.CheckedBy.Data.ID, checkedAt, "completed", virNumber)
 	if err != nil {
 		return err
 	}
