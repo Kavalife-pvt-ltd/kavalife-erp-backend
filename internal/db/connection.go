@@ -10,25 +10,19 @@ import (
 
 var DB *pgxpool.Pool
 
-func Connect(cfg config.Config) (*pgxpool.Pool, error) {
-	poolConfig, err := pgxpool.ParseConfig(cfg.DB_URL)
-	if err != nil {
-		log.Fatalf("Failed to parse DB URL: %v", err)
-	}
-
-	conn, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
+func Connect(config config.Config) (*pgxpool.Pool, error) {
+	conn, err := pgxpool.New(context.Background(), config.DB_URL)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
 
-	// ✅ Use pgx-specific "simple protocol" directive
+	// Example query to test connection
 	var version string
-	err = conn.QueryRow(context.Background(), `simple protocol:SELECT version()`).Scan(&version)
-	if err != nil {
-		log.Fatalf("Version check failed: %v", err)
+	if err := conn.QueryRow(context.Background(), "SELECT version()").Scan(&version); err != nil {
+		log.Fatalf("Query failed: %v", err)
 	}
 
-	log.Println("✅ Connected to Postgres:", version)
+	log.Println("Postgres Connected to:", version)
 	DB = conn
-	return conn, nil
+	return conn, err
 }
