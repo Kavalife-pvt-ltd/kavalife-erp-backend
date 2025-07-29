@@ -32,3 +32,9 @@ func StatusInternalServerError(c *gin.Context, err error) { //500
 		"error": err.Error(),
 	})
 }
+
+func SuccessWithMessage(c *gin.Context, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"message": message,
+	})
+}
