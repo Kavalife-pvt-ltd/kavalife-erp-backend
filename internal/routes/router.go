@@ -13,6 +13,7 @@ func Routes(r *gin.Engine) {
 	vendorRoutes := r.Group("/vendor").Use(AuthMiddleware())   //vendor api
 	virRoutes := r.Group("/vir").Use(AuthMiddleware())
 	grnRoutes := r.Group("/grn").Use(AuthMiddleware())
+	qaqc := r.Group("/qaqc").Use(AuthMiddleware())
 
 	apiRoutes.POST("/login", services.UserLogin)
 	apiRoutes.GET("/checkUser", services.CheckUser)
@@ -36,4 +37,7 @@ func Routes(r *gin.Engine) {
 
 	grnRoutes.POST("/create", services.CreateGRN)
 	grnRoutes.GET("/view", services.ViewGRNs)
+
+	qaqc.POST("/create", services.CreateQAQC)
+	qaqc.GET("/view", services.ViewQAQC)
 }

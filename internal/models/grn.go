@@ -46,4 +46,5 @@ type GRNResponse struct {
 	VIRNumber       string    `json:"vir_number"`
 	ProductName     string    `json:"product_name"`
 	VendorName      string    `json:"vendor_name"`
+	QAQCStatus      string    `json:"qaqcStatus"`
 }
