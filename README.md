@@ -16,3 +16,8 @@ To install:
     go mod tidy
 To run code:
     go run cmd/server/main.go
+```
+## 🚀 How to Create Docker Image
+#### Docker Build & Docker run
+    docker build -t kavalife-erp-backend .  
+    docker run -d  --name kavalife-erp-backend --env-file .env -p 8080:8080 kavalife-erp-backend
