@@ -1,4 +1,5 @@
+# .dockerignore file
 .git
 node_modules
-*.log
-*.tmp
+tmp
+test
