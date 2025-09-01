@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,17 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 	token, _ := utils.CreateJWT(user.ID, user.Username, 24*time.Hour) //creating token
-	c.SetCookie("usrCookie", token, 86400, "/", "", true, true)
+	// c.SetCookie("usrCookie", token, 86400, "/", "", true, true)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "usrCookie",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   86400,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+		Secure:   true,                  // ✅ Must be true for SameSite=None
+		SameSite: http.SameSiteNoneMode, // ✅ Required for cross-site
+	})
 	user.Password = ""
 	utils.SuccessWithData(c, user)
 }

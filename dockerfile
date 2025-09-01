@@ -10,20 +10,20 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build a statically linked binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o main ./cmd/server
+# Build a statically linked binary for Linux/amd64 or linux/arm64
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/server
 
 # Stage 2: Use a scratch (empty) image for minimal size
 FROM scratch
 
 WORKDIR /app
 
-# Copy binary and .env if needed
+# Copy the binary and .env file (if needed)
 COPY --from=builder /app/main .
 COPY .env .env
 
-# Expose port
-EXPOSE 8080
+# Expose port 80 (Render default)
+EXPOSE 80
 
 # Run the binary
 CMD ["./main"]
