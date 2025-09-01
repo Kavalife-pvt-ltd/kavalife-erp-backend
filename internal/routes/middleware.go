@@ -23,8 +23,9 @@ func RunApp() *gin.Engine {
 }
 
 var allowedOrigins = map[string]bool{
-	"http://localhost:5173":   true,
-	"https://erp.kavalife.in": true,
+	"http://localhost:5173":                    true,
+	"https://erp.kavalife.in":                  true,
+	"https://kavalife-erp-frontend.vercel.app": true,
 }
 
 func CORSMiddleware() gin.HandlerFunc {
