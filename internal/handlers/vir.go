@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -130,10 +131,25 @@ func InsertVIRHandler(ctx context.Context, req models.CreateVIRRequest) (*models
 
 func GetAllVIR(ctx context.Context) ([]models.VIR, error) {
 	rows, err := db.DB.Query(ctx, `
-		SELECT id, created_at, vendor_id, product_id, checklist, remarks, created_by, checked_by, checked_at, status, vir_number
-		FROM vir
-		ORDER BY created_at DESC
-	`)
+	SELECT
+		vi.id,
+		vi.created_at,
+		vi.vendor_id,
+		vi.product_id,
+		vi.checklist,
+		vi.remarks,
+		vi.created_by,
+		vi.checked_by,
+		vi.checked_at,
+		vi.status,
+		vi.vir_number,
+		ven.name  AS vendor_name,
+		prod.name AS product_name
+	FROM vir vi
+	LEFT JOIN vendors  ven  ON ven.id  = vi.vendor_id
+	LEFT JOIN products prod ON prod.id = vi.product_id
+	ORDER BY vi.created_at DESC
+`)
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +160,11 @@ func GetAllVIR(ctx context.Context) ([]models.VIR, error) {
 	for rows.Next() {
 		var vir models.VIR
 		var checklistJSON string
+		var vendorNameNS, productNameNS sql.NullString
 
 		err := rows.Scan(&vir.ID, &vir.CreatedAt, &vir.VendorID, &vir.ProductID, &checklistJSON,
-			&vir.Remarks, &vir.CreatedBy, &vir.CheckedBy, &vir.CheckedAt, &vir.Status, &vir.VIRNumber)
+			&vir.Remarks, &vir.CreatedBy, &vir.CheckedBy, &vir.CheckedAt, &vir.Status, &vir.VIRNumber, &vendorNameNS,
+			&productNameNS)
 		if err != nil {
 			return nil, err
 		}
@@ -155,6 +173,12 @@ func GetAllVIR(ctx context.Context) ([]models.VIR, error) {
 			return nil, errors.New("failed to parse checklist")
 		}
 
+		if vendorNameNS.Valid {
+			vir.VendorName = &vendorNameNS.String
+		}
+		if productNameNS.Valid {
+			vir.ProductName = &productNameNS.String
+		}
 		virs = append(virs, vir)
 	}
 
@@ -164,16 +188,33 @@ func GetAllVIR(ctx context.Context) ([]models.VIR, error) {
 func GetVIRByNumber(ctx context.Context, virNumber string) (*models.VIR, error) {
 	var vir models.VIR
 	var checklistJSON string
+	var vendorNameNS, productNameNS sql.NullString
 
 	query := `
-		SELECT id, created_at, vendor_id, product_id, checklist, remarks, created_by, checked_by, checked_at, status, vir_number
-		FROM vir
-		WHERE vir_number = $1
+		SELECT
+			vi.id,
+			vi.created_at,
+			vi.vendor_id,
+			vi.product_id,
+			vi.checklist,
+			vi.remarks,
+			vi.created_by,
+			vi.checked_by,
+			vi.checked_at,
+			vi.status,
+			vi.vir_number,
+			ven.name  AS vendor_name,
+			prod.name AS product_name
+		FROM vir vi
+		LEFT JOIN vendors  ven  ON ven.id  = vi.vendor_id
+		LEFT JOIN products prod ON prod.id = vi.product_id
+		WHERE vi.vir_number = $1
 	`
 
 	err := db.DB.QueryRow(ctx, query, virNumber).Scan(
 		&vir.ID, &vir.CreatedAt, &vir.VendorID, &vir.ProductID, &checklistJSON,
-		&vir.Remarks, &vir.CreatedBy, &vir.CheckedBy, &vir.CheckedAt, &vir.Status, &vir.VIRNumber,
+		&vir.Remarks, &vir.CreatedBy, &vir.CheckedBy, &vir.CheckedAt, &vir.Status, &vir.VIRNumber, &vendorNameNS,
+		&productNameNS,
 	)
 	if err != nil {
 		return nil, err
@@ -181,6 +222,13 @@ func GetVIRByNumber(ctx context.Context, virNumber string) (*models.VIR, error) 
 
 	if err := json.Unmarshal([]byte(checklistJSON), &vir.Checklist); err != nil {
 		return nil, errors.New("failed to parse checklist")
+	}
+
+	if vendorNameNS.Valid {
+		vir.VendorName = &vendorNameNS.String
+	}
+	if productNameNS.Valid {
+		vir.ProductName = &productNameNS.String
 	}
 
 	return &vir, nil
