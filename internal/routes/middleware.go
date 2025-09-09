@@ -26,6 +26,7 @@ var allowedOrigins = map[string]bool{
 	"http://localhost:5173":                    true,
 	"https://erp.kavalife.in":                  true,
 	"https://kavalife-erp-frontend.vercel.app": true,
+	"https://kavalife-erp.vercel.app":          true,
 }
 
 func CORSMiddleware() gin.HandlerFunc {
@@ -35,7 +36,7 @@ func CORSMiddleware() gin.HandlerFunc {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
 
 			if c.Request.Method == "OPTIONS" {
 				c.AbortWithStatus(204)
