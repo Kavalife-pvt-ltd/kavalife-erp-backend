@@ -1,29 +1,54 @@
-# Stage 1: Build the Go binary
+# -------------------------
+# Stage 1: Build Go binary
+# -------------------------
 FROM golang:1.24 AS builder
 
 WORKDIR /app
 
-# Download Go modules first
+# Cache dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
 COPY . .
 
-# Build a statically linked binary for Linux/amd64 or linux/arm64
+# Build statically-linked Go binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/server
 
-# Stage 2: Use a scratch (empty) image for minimal size
-FROM scratch
+# Optional: copy local .env for local testing
+COPY .env /app/.env
 
-WORKDIR /app
 
-# Copy the binary and .env file (if needed)
+# -------------------------
+# Stage 2a: Local image with RIE
+# -------------------------
+FROM public.ecr.aws/lambda/provided:al2 AS local
+
+WORKDIR /var/task
+
+# Copy Go binary
 COPY --from=builder /app/main .
-COPY .env .env
+COPY --from=builder /app/.env .env
 
-# Expose port 80 (Render default)
-EXPOSE 80
+# Copy RIE for local Lambda emulation
+ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
+RUN chmod +x /usr/local/bin/aws-lambda-rie
 
-# Run the binary
-CMD ["./main"]
+# ENTRYPOINT uses RIE for local testing
+ENTRYPOINT ["/usr/local/bin/aws-lambda-rie", "/var/task/main"]
+CMD []
+
+
+# -------------------------
+# Stage 2b: Production image (no RIE)
+# -------------------------
+FROM gcr.io/distroless/base-debian11 AS prod
+
+# Copy Go binary
+COPY --from=builder /app/main /var/task/main
+
+# Optional: copy .env if needed
+# COPY --from=builder /app/.env /var/task/.env
+
+# ENTRYPOINT is just the Lambda binary for production
+ENTRYPOINT ["/var/task/main"]
+CMD []
