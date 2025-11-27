@@ -21,3 +21,64 @@ To run code:
 #### Docker Build & Docker run
     docker build -t kavalife-erp-backend .  
     docker run -d  --name kavalife-erp-backend --env-file .env -p 8080:8080 kavalife-erp-backend
+```
+kavalife-erp-backend
+├─ .air.toml
+├─ .dockerignore
+├─ README.md
+├─ cmd
+│  └─ server
+│     └─ main.go
+├─ config
+│  └─ config.go
+├─ dockerfile
+├─ docs
+├─ go.mod
+├─ go.sum
+├─ internal
+│  ├─ db
+│  │  └─ connection.go
+│  ├─ handlers
+│  │  ├─ grn.go
+│  │  ├─ notification.go
+│  │  ├─ products.go
+│  │  ├─ qaqc.go
+│  │  ├─ sales_po.go
+│  │  ├─ users.go
+│  │  ├─ vendors.go
+│  │  └─ vir.go
+│  ├─ models
+│  │  ├─ grn.go
+│  │  ├─ notification.go
+│  │  ├─ product.go
+│  │  ├─ qaqc.go
+│  │  ├─ sales_po.go
+│  │  ├─ sales_po_status.go
+│  │  ├─ users.go
+│  │  ├─ vendors.go
+│  │  └─ vir.go
+│  ├─ routes
+│  │  ├─ middleware.go
+│  │  └─ router.go
+│  ├─ services
+│  │  ├─ grn.go
+│  │  ├─ products.go
+│  │  ├─ qaqc.go
+│  │  ├─ sales_po.go
+│  │  ├─ users.go
+│  │  ├─ vendors.go
+│  │  └─ vir.go
+│  └─ utils
+│     ├─ context.go
+│     ├─ customRes.go
+│     ├─ email.go
+│     ├─ email_template.go
+│     ├─ hashEncrypt.go
+│     ├─ jwt.go
+│     ├─ logger.go
+│     └─ utils.go
+├─ makefile
+├─ migrations
+└─ tmp
+
+```
