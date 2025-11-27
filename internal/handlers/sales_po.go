@@ -11,6 +11,7 @@ import (
 
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
+	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
 //
@@ -144,7 +145,95 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 		return nil, err
 	}
 
-	return GetSalesPOByID(ctx, id)
+	// Fetch the full PO struct
+	po, err := GetSalesPOByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	adminRows, err := db.DB.Query(ctx, `SELECT id, email FROM public.users WHERE role = 'admin'`)
+	if err == nil {
+		defer adminRows.Close()
+
+		// decide PO number to display
+		poNum := poNumber
+		if po.PONumber != nil {
+			poNum = *po.PONumber
+		}
+
+		// Prepare template data
+		quantityUnit := ""
+		if po.QuantityUnit != nil {
+			quantityUnit = *po.QuantityUnit
+		}
+		purity := ""
+		if po.Purity != nil {
+			purity = *po.Purity
+		}
+		grade := ""
+		if po.Grade != nil {
+			grade = *po.Grade
+		}
+		expectedDelivery := ""
+		if po.ExpectedDeliveryDate != nil {
+			expectedDelivery = po.ExpectedDeliveryDate.Format("02 Jan 2006")
+		}
+		createdAtStr := po.CreatedAt.Format("02 Jan 2006 15:04")
+
+		additionalComment := ""
+		if po.Comments != nil {
+			additionalComment = *po.Comments
+		}
+
+		templateData := utils.NewPONotificationData{
+			PONumber:          poNum,
+			CompanyName:       po.CompanyName,
+			CompanyAddress:    po.CompanyAddress,
+			RequestType:       string(po.RequestType),
+			Quantity:          po.Quantity,
+			QuantityUnit:      quantityUnit,
+			Purity:            purity,
+			Grade:             grade,
+			ExpectedDelivery:  expectedDelivery,
+			CreatedAt:         createdAtStr,
+			AdditionalComment: additionalComment,
+		}
+
+		for adminRows.Next() {
+			var adminID int64
+			var adminEmail string
+
+			if scanErr := adminRows.Scan(&adminID, &adminEmail); scanErr != nil {
+				continue
+			}
+
+			// Build template — subject + HTML body
+			subject, body, tmplErr := utils.BuildNewPONotificationEmail(templateData)
+			if tmplErr != nil {
+				// don't block PO creation
+				continue
+			}
+
+			// Log notification event in DB
+			_, _ = InsertNotificationEvent(ctx, models.CreateNotificationEventRequest{
+				POID:            &po.ID,
+				EventType:       "new_po_created",
+				RecipientUserID: adminID,
+				Payload: map[string]any{
+					"poNumber": poNum,
+					"company":  po.CompanyName,
+					"status":   po.Status,
+				},
+			})
+
+			// Send email (best-effort)
+			if adminEmail != "" {
+				_ = utils.SendEmail(adminEmail, subject, body)
+			}
+		}
+	}
+
+	return po, nil
 }
 
 // GetSalesPOByID fetches a single PO row by id.

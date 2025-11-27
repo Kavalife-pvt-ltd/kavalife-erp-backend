@@ -73,12 +73,6 @@ func GetSalesPO(c *gin.Context) {
 	})
 }
 
-// GET /sales-po/view
-// List POs with optional filters:
-//
-//	?status=quote_requested
-//	?salesRepId=123
-//	?productId=45
 func ListSalesPO(c *gin.Context) {
 	status := c.Query("status")
 	salesRepIDStr := c.Query("salesRepId")
@@ -117,8 +111,6 @@ func ListSalesPO(c *gin.Context) {
 	})
 }
 
-// PATCH /sales-po/:id/status
-// Update status (admin/client transitions) — approve, reject, route, etc.
 func UpdateSalesPOStatus(c *gin.Context) {
 	idStr := c.Param("id")
 	poID, err := strconv.ParseInt(idStr, 10, 64)

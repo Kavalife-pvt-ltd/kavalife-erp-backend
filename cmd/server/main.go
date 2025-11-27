@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	"github.com/paaart/kavalife-erp-backend/config"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
 	"github.com/paaart/kavalife-erp-backend/internal/routes"
@@ -15,6 +16,7 @@ func main() {
 
 	Log := util.InitLogger()
 	appConfig := config.ConfigLoader()
+	godotenv.Load()
 
 	pool, err := db.Connect(appConfig) // connection to postgres
 	if err != nil {
