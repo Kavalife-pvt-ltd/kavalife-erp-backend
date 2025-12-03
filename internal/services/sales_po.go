@@ -77,6 +77,7 @@ func ListSalesPO(c *gin.Context) {
 	status := c.Query("status")
 	salesRepIDStr := c.Query("salesRepId")
 	productIDStr := c.Query("productId")
+	sendTo := c.Query("sendTo")
 
 	var filter handlers.SalesPOFilter
 
@@ -94,6 +95,9 @@ func ListSalesPO(c *gin.Context) {
 		if id, err := strconv.ParseInt(productIDStr, 10, 64); err == nil {
 			filter.ProductID = &id
 		}
+	}
+	if sendTo != "" {
+		filter.SendTo = &sendTo
 	}
 
 	pos, err := handlers.ListSalesPO(c, filter)

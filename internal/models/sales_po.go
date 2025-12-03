@@ -13,17 +13,20 @@ const (
 	RequestTypePurchase SalesPORequestType = "purchase"
 
 	// status
-	StatusQuoteRequested     SalesPOStatus = "quote_requested"
-	StatusQuoteAdminApproved SalesPOStatus = "quote_admin_approved"
-	StatusQuoteSentToClient  SalesPOStatus = "quote_sent_to_client"
-	StatusClientNegotiation  SalesPOStatus = "client_negotiation"
-	StatusClientApproved     SalesPOStatus = "client_approved"
-	StatusFinalAdminApproved SalesPOStatus = "final_admin_approved"
-	StatusRoutedToPurchase   SalesPOStatus = "routed_to_purchase"
-	StatusRoutedToProduction SalesPOStatus = "routed_to_production"
-	StatusAdminRejected      SalesPOStatus = "admin_rejected"
-	StatusClientRejected     SalesPOStatus = "client_rejected"
-	StatusCancelled          SalesPOStatus = "cancelled"
+	StatusQuoteRequested      SalesPOStatus = "quote_requested"
+	StatusQuoteAdminApproved  SalesPOStatus = "quote_admin_approved"
+	StatusQuoteSentToClient   SalesPOStatus = "quote_sent_to_client"
+	StatusClientNegotiation   SalesPOStatus = "client_negotiation"
+	StatusClientApproved      SalesPOStatus = "client_approved"
+	StatusFinalAdminApproved  SalesPOStatus = "final_admin_approved"
+	StatusRoutedToPurchase    SalesPOStatus = "routed_to_purchase"
+	StatusRoutedToProduction  SalesPOStatus = "routed_to_production"
+	StatusAdminRejected       SalesPOStatus = "admin_rejected"
+	StatusClientRejected      SalesPOStatus = "client_rejected"
+	StatusCancelled           SalesPOStatus = "cancelled"
+	StatusPurchaseCompleted   SalesPOStatus = "purchase_completed"
+	StatusProductionCompleted SalesPOStatus = "production_completed"
+	StatusClosed              SalesPOStatus = "closed"
 
 	// fulfillment_type
 	FulfillmentPurchase   SalesPOFulfillmentType = "purchase"
@@ -57,6 +60,8 @@ type SalesPO struct {
 	RequestDate          time.Time  `db:"request_date" json:"requestDate"`
 
 	Status SalesPOStatus `db:"status" json:"status"`
+
+	SendTo string `json:"sendTo,omitempty"`
 
 	SalesRepID      *int64     `db:"sales_rep_id" json:"salesRepId,omitempty"`
 	ApprovedByID    *int64     `db:"approved_by_id" json:"approvedById,omitempty"`
@@ -106,19 +111,15 @@ type CreateSalesPORequest struct {
 
 // UpdateSalesPOStatusRequest is for status transitions (admin/client actions).
 type UpdateSalesPOStatusRequest struct {
-	POID int64 `json:"poId"`
-
-	ToStatus SalesPOStatus `json:"toStatus"`
-
-	// Optional fields depending on status:
+	POID            int64                   `json:"poId"`
+	ToStatus        SalesPOStatus           `json:"toStatus"`
+	NewQuantity     *float64                `json:"newQuantity,omitempty"`
+	NewAskingPrice  *float64                `json:"newAskingPrice,omitempty"`
+	NewComments     *string                 `json:"newComments,omitempty"`
 	RejectionReason *string                 `json:"rejectionReason,omitempty"`
 	FulfillmentType *SalesPOFulfillmentType `json:"fulfillmentType,omitempty"`
 	DeliveryCode    *string                 `json:"deliveryCode,omitempty"`
-
-	// For client negotiation updates you might also allow updating price/qty:
-	NewQuantity    *float64 `json:"newQuantity,omitempty"`
-	NewAskingPrice *float64 `json:"newAskingPrice,omitempty"`
-	NewComments    *string  `json:"newComments,omitempty"`
+	SendTo          *string                 `json:"sendTo,omitempty"` // ✅ NEW
 }
 
 // SalesPOResponse is what you might send back to the frontend.
