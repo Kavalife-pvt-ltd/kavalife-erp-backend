@@ -40,7 +40,7 @@ func UserLogin(c *gin.Context) {
 		utils.SuccessWithError(c, errors.New("invalid username or password"))
 		return
 	}
-	token, _ := utils.CreateJWT(user.ID, user.Username, 24*time.Hour) //creating token
+	token, _ := utils.CreateJWT(user.ID, user.Username, user.Department, user.Role, 24*time.Hour) //creating token
 	// c.SetCookie("usrCookie", token, 86400, "/", "", true, true)
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "usrCookie",
