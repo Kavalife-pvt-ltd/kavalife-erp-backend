@@ -1,7 +1,10 @@
 package services
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -9,6 +12,7 @@ import (
 	"github.com/paaart/kavalife-erp-backend/internal/handlers"
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 func AllUsers(c *gin.Context) {
@@ -18,7 +22,6 @@ func AllUsers(c *gin.Context) {
 		return
 	}
 	utils.SuccessWithData(c, data)
-
 }
 
 func UserLogin(c *gin.Context) {
@@ -81,6 +84,134 @@ func CheckUser(c *gin.Context) {
 	utils.SuccessWithData(c, user)
 }
 
+func CreateNewUser(c *gin.Context) {
+	var req models.NewUser
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, errors.New("invalid JSON input"))
+		return
+	}
+	// check number
+	if len(req.Mobile) != 10 {
+		utils.BadRequest(c, errors.New("mobile number must be exactly 10 digits"))
+		return
+	}
+	if len(req.Name) == 0 {
+		utils.BadRequest(c, errors.New("Please provide name"))
+		return
+	}
+	//convert password
+	hashPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
+	req.Password = hashPassword
+	//insert in table
+	id, err := handlers.InsertNewUser(c, req)
+	if err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
+	utils.SuccessWithData(c, fmt.Sprintf("User inserted with id %d", id))
+}
+
+func AllNewUsersList(c *gin.Context) {
+	data, err := handlers.AllNewUser(c)
+	if err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
+	utils.SuccessWithData(c, data)
+}
+func checkUserExists(ctx context.Context, username, phone string) error {
+	log.Println(username, "----", phone)
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		user, err := handlers.GetUserByUsername(ctx, username)
+		if err != nil {
+			return err
+		}
+		if user != nil {
+			return errors.New("username already exists")
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		user, err := handlers.GetUserByPhoneNum(ctx, phone)
+		if err != nil {
+			return err
+		}
+		if user != nil {
+			return errors.New("phone number already exists")
+		}
+		return nil
+	})
+
+	return g.Wait()
+}
+func ApproveNewUser(c *gin.Context) {
+	var req models.ApproveNewUsers
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, errors.New("invalid JSON input"))
+		return
+	}
+	userID, exists := c.Get("id")
+	if !exists {
+		utils.BadRequest(c, errors.New("user ID not found in context"))
+		return
+	}
+	uid, ok := userID.(int)
+	if !ok {
+		utils.BadRequest(c, errors.New("invalid user ID format"))
+		return
+	}
+	role, exists := c.Get("role")
+	if !exists {
+		utils.BadRequest(c, errors.New("user role not found in context"))
+		return
+	}
+	urole, ok := role.(string)
+	if !ok {
+		utils.BadRequest(c, errors.New("invalid user role format"))
+		return
+	}
+	if urole != "admin" {
+		utils.SuccessWithError(c, errors.New("User not allowed to do the action"))
+		return
+	}
+	//find newUser via id
+	newUser, err := handlers.FindNewUserByID(c, req.ID)
+	if err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
+	// log.Println("------", newUser)
+	//find username and number in users if found then return with already exists
+	err = checkUserExists(c, newUser.Username, newUser.Mobile)
+
+	if err != nil && err.Error() != "no rows in result set" {
+		utils.SuccessWithError(c, err)
+		return
+	}
+	log.Println("------", newUser)
+	//insert new Users and delete from newUsers
+	newId, err := handlers.CreateUsers(c, *newUser, req.Role, req.Department, uid)
+	if err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
+	//delete NewUser
+	err = handlers.DeleteNewUser(c, req.ID)
+	if err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
+
+	utils.SuccessWithData(c, fmt.Sprintf("User inserted with id %d", newId))
+
+}
 func Logout(c *gin.Context) {
 	// Set the cookie with MaxAge -1 to delete
 	c.SetCookie("usrCookie", "", -1, "/", "", true, true)
