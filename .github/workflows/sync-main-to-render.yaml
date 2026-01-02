@@ -1,0 +1,31 @@
+name: Sync main → render
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write 
+
+jobs:
+  sync-render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync render with main
+        run: |
+          git fetch origin
+          git checkout render || git checkout -b render
+          git reset --hard origin/main
+          git push origin render --force
