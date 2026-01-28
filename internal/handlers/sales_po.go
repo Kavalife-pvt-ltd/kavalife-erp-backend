@@ -14,13 +14,6 @@ import (
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
-//
-// ──────────────────────────────────────────────────────────────
-//  Helpers
-// ──────────────────────────────────────────────────────────────
-//
-
-// generate next PO number like "PO-012025-001"
 func getNextPONumber(ctx context.Context, ts time.Time) (string, error) {
 	monthYear := ts.Format("012006") // MMYYYY
 	prefix := "PO-" + monthYear + "-"
@@ -58,8 +51,8 @@ func getNextPONumber(ctx context.Context, ts time.Time) (string, error) {
 
 func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*models.SalesPO, error) {
 	// basic sanity
-	if req.ProductID == 0 {
-		return nil, errors.New("productId is required")
+	if strings.TrimSpace(req.ProductName) == "" {
+		return nil, errors.New("productName is required")
 	}
 	if req.CompanyName == "" || req.CompanyAddress == "" {
 		return nil, errors.New("companyName and companyAddress are required")
@@ -84,7 +77,7 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 	query := `
 	INSERT INTO sales_po (
 		po_number,
-		product_id,
+		product_name,
 		company_name,
 		company_address,
 		coa_url,
@@ -116,7 +109,7 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 		ctx,
 		query,
 		poNumber,
-		req.ProductID,
+		req.ProductName,
 		req.CompanyName,
 		req.CompanyAddress,
 		req.COAURL,
@@ -134,13 +127,12 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 		requestDate,
 		models.StatusQuoteRequested,
 		req.SalesRepID,
-		"admin", // new POs go first to admin
+		"admin",
 	).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Fetch the full PO struct
 	po, err := GetSalesPOByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -150,13 +142,11 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 	if err == nil {
 		defer adminRows.Close()
 
-		// decide PO number to display
 		poNum := poNumber
 		if po.PONumber != nil {
 			poNum = *po.PONumber
 		}
 
-		// Prepare template data
 		quantityUnit := ""
 		if po.QuantityUnit != nil {
 			quantityUnit = *po.QuantityUnit
@@ -202,14 +192,11 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 				continue
 			}
 
-			// Build template — subject + HTML body
 			subject, body, tmplErr := utils.BuildNewPONotificationEmail(templateData)
 			if tmplErr != nil {
-				// don't block PO creation
 				continue
 			}
 
-			// Log notification event in DB
 			_, _ = InsertNotificationEvent(ctx, models.CreateNotificationEventRequest{
 				POID:            &po.ID,
 				EventType:       "new_po_created",
@@ -221,7 +208,6 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 				},
 			})
 
-			// Send email (best-effort)
 			if adminEmail != "" {
 				_ = utils.SendEmail(adminEmail, subject, body)
 			}
@@ -231,7 +217,6 @@ func CreateSalesPO(ctx context.Context, req models.CreateSalesPORequest) (*model
 	return po, nil
 }
 
-// GetSalesPOByID fetches a single PO row by id.
 func GetSalesPOByID(ctx context.Context, poID int64) (*models.SalesPO, error) {
 	var po models.SalesPO
 
@@ -261,7 +246,7 @@ func GetSalesPOByID(ctx context.Context, poID int64) (*models.SalesPO, error) {
 	SELECT
 		id,
 		po_number,
-		product_id,
+		product_name,
 		company_name,
 		company_address,
 		coa_url,
@@ -299,7 +284,7 @@ func GetSalesPOByID(ctx context.Context, poID int64) (*models.SalesPO, error) {
 	err := db.DB.QueryRow(ctx, query, poID).Scan(
 		&po.ID,
 		&poNumberNS,
-		&po.ProductID,
+		&po.ProductName,
 		&po.CompanyName,
 		&po.CompanyAddress,
 		&coaURLNS,
@@ -418,22 +403,19 @@ func GetSalesPOByID(ctx context.Context, poID int64) (*models.SalesPO, error) {
 	return &po, nil
 }
 
-// SalesPOFilter is used for ListSalesPO dynamic querying.
 type SalesPOFilter struct {
 	Status     *string
 	SalesRepID *int64
 	ProductID  *int64
 	SendTo     *string
-	// later you can add date ranges etc.
 }
 
-// handlers/sales_po.go
 func ListSalesPO(ctx context.Context, filter SalesPOFilter) ([]models.SalesPO, error) {
 	base := `
 	SELECT
 		id,
 		po_number,
-		product_id,
+		product_name,
 		company_name,
 		company_address,
 		coa_url,
@@ -529,7 +511,7 @@ func ListSalesPO(ctx context.Context, filter SalesPOFilter) ([]models.SalesPO, e
 		if err := rows.Scan(
 			&po.ID,
 			&poNumberNS,
-			&po.ProductID,
+			&po.ProductName,
 			&po.CompanyName,
 			&po.CompanyAddress,
 			&coaURLNS,
@@ -651,65 +633,61 @@ func ListSalesPO(ctx context.Context, filter SalesPOFilter) ([]models.SalesPO, e
 }
 
 func isValidStatusTransition(from, to models.SalesPOStatus) bool {
-	// Map of allowed "from → to" transitions
 	allowed := map[models.SalesPOStatus][]models.SalesPOStatus{
+		// ── Creation → admin review ─────────────────────────────
 		models.StatusQuoteRequested: {
-			models.StatusQuoteAdminApproved,
-			models.StatusAdminRejected,
+			models.StatusRoutedToPurchase,   // admin sends to purchase
+			models.StatusRoutedToProduction, // admin sends to production
+			models.StatusAdminRejected,      // admin rejects back to sales
 			models.StatusCancelled,
 		},
 
+		// ── Admin pricing review (after sales pricing) ─────────
+		// "quote_admin_approved" = pricing ready & admin signed off
 		models.StatusQuoteAdminApproved: {
-			models.StatusQuoteSentToClient,
-			models.StatusClientNegotiation,
-			models.StatusCancelled,
-		},
-		models.StatusQuoteSentToClient: {
-			models.StatusClientNegotiation,
-			models.StatusClientApproved,
-			models.StatusClientRejected,
-			models.StatusCancelled,
-		},
-		models.StatusClientNegotiation: {
-			models.StatusQuoteAdminApproved,
-			models.StatusQuoteSentToClient,
-			models.StatusClientApproved,
-			models.StatusClientRejected,
-			models.StatusCancelled,
-		},
-		models.StatusClientApproved: {
-			models.StatusRoutedToPurchase,
-			models.StatusRoutedToProduction,
+			models.StatusFinalAdminApproved,
 			models.StatusAdminRejected,
 			models.StatusCancelled,
 		},
+
+		// ── Initial routing to ops ─────────────────────────────
 		models.StatusRoutedToPurchase: {
-			models.StatusPurchaseCompleted,
+			models.StatusPurchaseCompleted, // purchase completed & sent back
+			models.StatusCancelled,
+		},
+		models.StatusRoutedToProduction: {
+			models.StatusProductionCompleted, // production completed & sent back
 			models.StatusCancelled,
 		},
 
-		models.StatusRoutedToProduction: {
-			models.StatusProductionCompleted,
-			models.StatusCancelled,
-		},
+		// ── Ops → back to admin / sales ───────────────────────
 		models.StatusPurchaseCompleted: {
-			models.StatusFinalAdminApproved,
+			// Purchase → Sales adds pricing → Admin final review
+			models.StatusQuoteAdminApproved, // sales sends for final admin approval
 			models.StatusCancelled,
 		},
 		models.StatusProductionCompleted: {
+			// Directly to admin final sign-off
 			models.StatusFinalAdminApproved,
+			models.StatusAdminRejected,
 			models.StatusCancelled,
 		},
-		models.StatusFinalAdminApproved: {},
+
+		// ── Final stage ────────────────────────────────────────
+		models.StatusFinalAdminApproved: {
+			// usually terminal – but you *could* allow cancellation here
+			models.StatusCancelled,
+		},
+
+		// ── Rejection / reopen ─────────────────────────────────
 		models.StatusAdminRejected: {
+			// allow sales to fix & resubmit
 			models.StatusQuoteRequested,
 			models.StatusCancelled,
 		},
-		models.StatusClientRejected: {
-			models.StatusQuoteRequested,
-			models.StatusCancelled,
-		},
-		models.StatusCancelled: {},
+
+		// ── Client-side statuses if you ever use them ─────────
+		models.StatusClientRejected: {},
 	}
 
 	nextList, ok := allowed[from]
@@ -741,9 +719,7 @@ func insertStatusLog(ctx context.Context, input models.CreateStatusLogInput) err
 	return err
 }
 
-// UpdateSalesPOStatus updates status + related fields and logs the transition.
 func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequest, actorID int64) (*models.SalesPO, error) {
-	// 1. Load current PO
 	current, err := GetSalesPOByID(ctx, req.POID)
 	if err != nil {
 		return nil, err
@@ -761,7 +737,6 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 	args := []interface{}{toStatus, now}
 	argPos := 3
 
-	// negotiation / editable fields
 	if req.NewQuantity != nil {
 		setParts = append(setParts, fmt.Sprintf("quantity = $%d", argPos))
 		args = append(args, *req.NewQuantity)
@@ -819,7 +794,6 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 		argPos++
 	}
 
-	// completion by purchase / production
 	if toStatus == models.StatusPurchaseCompleted {
 		noteParts = append(noteParts, "Marked completed by purchase team")
 	}
@@ -830,7 +804,6 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 		noteParts = append(noteParts, "PO closed by admin")
 	}
 
-	// delivery code (optional)
 	if req.DeliveryCode != nil {
 		setParts = append(setParts, fmt.Sprintf("delivery_code = $%d", argPos))
 		args = append(args, *req.DeliveryCode)
@@ -838,44 +811,53 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 		noteParts = append(noteParts, "DeliveryCode set/updated")
 	}
 
-	// send_to logic
-	// 1) explicit sendTo from request (frontend-driven)
-	if req.SendTo != nil && *req.SendTo != "" {
-		setParts = append(setParts, fmt.Sprintf("send_to = $%d", argPos))
-		args = append(args, *req.SendTo)
-		argPos++
-	} else {
-		// 2) automatic defaults based on toStatus if not provided
-		var autoSendTo string
+	var autoSendTo string
 
-		switch toStatus {
-		case models.StatusQuoteRequested:
-			// Sales is (re)requesting quote → goes to admin
-			autoSendTo = "admin"
-		case models.StatusAdminRejected:
-			// Goes back to sales
-			autoSendTo = "sales"
-		case models.StatusRoutedToPurchase:
-			autoSendTo = "purchase"
-		case models.StatusRoutedToProduction:
-			autoSendTo = "production"
-		case models.StatusPurchaseCompleted, models.StatusProductionCompleted, models.StatusFinalAdminApproved:
-			autoSendTo = "admin"
-		}
+	switch toStatus {
+	case models.StatusQuoteRequested:
+		// Sales (or re-opened) → Admin review
+		autoSendTo = "admin"
 
-		if autoSendTo != "" {
-			setParts = append(setParts, fmt.Sprintf("send_to = $%d", argPos))
-			args = append(args, autoSendTo)
-			argPos++
-		}
+	case models.StatusRoutedToPurchase:
+		// Admin → Purchase
+		autoSendTo = "purchase"
+
+	case models.StatusRoutedToProduction:
+		// Admin → Production
+		autoSendTo = "production"
+
+	case models.StatusPurchaseCompleted:
+		// Purchase → admin (pricing / follow-up)
+		autoSendTo = "admin"
+
+	case models.StatusProductionCompleted:
+		// Production → Admin (final sign-off)
+		autoSendTo = "admin"
+
+	case models.StatusQuoteAdminApproved:
+		// Sales sends pricing for final admin approval
+		autoSendTo = "admin"
+
+	case models.StatusFinalAdminApproved:
+		// After final approval, Sales owns it
+		autoSendTo = "sales"
+
+	case models.StatusAdminRejected:
+		// Any rejection → Sales to revisit
+		autoSendTo = "sales"
 	}
 
-	// Final UPDATE
+	if autoSendTo != "" {
+		setParts = append(setParts, fmt.Sprintf("send_to = $%d", argPos))
+		args = append(args, autoSendTo)
+		argPos++
+	}
+
 	query := fmt.Sprintf(`
-        UPDATE sales_po
-        SET %s
-        WHERE id = $%d
-    `, strings.Join(setParts, ", "), argPos)
+		UPDATE sales_po
+		SET %s
+		WHERE id = $%d
+	`, strings.Join(setParts, ", "), argPos)
 
 	args = append(args, req.POID)
 
@@ -901,11 +883,9 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 	}
 	_ = insertStatusLog(ctx, logInput)
 
-	// 4. Return updated PO
 	return GetSalesPOByID(ctx, req.POID)
 }
 
-// GetSalesPOStatusLog fetches all status transitions for a PO.
 func GetSalesPOStatusLog(ctx context.Context, poID int64) ([]models.SalesPOStatusLog, error) {
 	rows, err := db.DB.Query(ctx, `
 		SELECT

@@ -37,8 +37,8 @@ const (
 type SalesPO struct {
 	ID int64 `db:"id" json:"id"`
 
-	PONumber  *string `db:"po_number" json:"poNumber,omitempty"`
-	ProductID int64   `db:"product_id" json:"productId"`
+	PONumber    *string `db:"po_number" json:"poNumber,omitempty"`
+	ProductName string  `json:"productName" db:"product_name"`
 
 	CompanyName          string  `db:"company_name" json:"companyName"`
 	CompanyAddress       string  `db:"company_address" json:"companyAddress"`
@@ -83,7 +83,7 @@ type SalesPO struct {
 
 // CreateSalesPORequest is what the frontend sends when creating a new quote request.
 type CreateSalesPORequest struct {
-	ProductID int64 `json:"productId"`
+	ProductName string `json:"productName" db:"product_name"`
 
 	CompanyName          string  `json:"companyName"`
 	CompanyAddress       string  `json:"companyAddress"`

@@ -11,7 +11,6 @@ import (
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 )
 
-// Low-level insert — think of this as "enqueue notification"
 func InsertNotificationEvent(ctx context.Context, req models.CreateNotificationEventRequest) (*models.NotificationEvent, error) {
 	var payloadJSON []byte
 	var err error
@@ -57,7 +56,6 @@ func InsertNotificationEvent(ctx context.Context, req models.CreateNotificationE
 		return nil, err
 	}
 
-	// Fetch back the full row (mainly for created_at)
 	return GetNotificationByID(ctx, id)
 }
 
@@ -127,7 +125,6 @@ func GetNotificationByID(ctx context.Context, id int64) (*models.NotificationEve
 	return &n, nil
 }
 
-// Optional helper to list notifications (for an admin screen/debug)
 func ListNotificationEvents(ctx context.Context, userID *int64, status *models.NotificationStatus) ([]models.NotificationEvent, error) {
 	base := `
 		SELECT
