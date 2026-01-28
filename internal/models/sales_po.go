@@ -27,6 +27,8 @@ const (
 	StatusPurchaseCompleted   SalesPOStatus = "purchase_completed"
 	StatusProductionCompleted SalesPOStatus = "production_completed"
 	StatusClosed              SalesPOStatus = "closed"
+	StatusPurchasePriced      SalesPOStatus = "purchase_priced"
+	StatusPurchaseApproved    SalesPOStatus = "purchase_approved"
 
 	// fulfillment_type
 	FulfillmentPurchase   SalesPOFulfillmentType = "purchase"
@@ -37,8 +39,8 @@ const (
 type SalesPO struct {
 	ID int64 `db:"id" json:"id"`
 
-	PONumber  *string `db:"po_number" json:"poNumber,omitempty"`
-	ProductID int64   `db:"product_id" json:"productId"`
+	PONumber    *string `db:"po_number" json:"poNumber,omitempty"`
+	ProductName string  `json:"productName" db:"product_name"`
 
 	CompanyName          string  `db:"company_name" json:"companyName"`
 	CompanyAddress       string  `db:"company_address" json:"companyAddress"`
@@ -77,13 +79,14 @@ type SalesPO struct {
 	PackedAt     *time.Time `db:"packed_at" json:"packedAt,omitempty"`
 	DeliveryCode *string    `db:"delivery_code" json:"deliveryCode,omitempty"`
 
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt     time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updatedAt"`
+	PurchasePrice *float64  `db:"purchase_price" json:"purchasePrice,omitempty"`
 }
 
 // CreateSalesPORequest is what the frontend sends when creating a new quote request.
 type CreateSalesPORequest struct {
-	ProductID int64 `json:"productId"`
+	ProductName string `json:"productName" db:"product_name"`
 
 	CompanyName          string  `json:"companyName"`
 	CompanyAddress       string  `json:"companyAddress"`
@@ -120,6 +123,7 @@ type UpdateSalesPOStatusRequest struct {
 	FulfillmentType *SalesPOFulfillmentType `json:"fulfillmentType,omitempty"`
 	DeliveryCode    *string                 `json:"deliveryCode,omitempty"`
 	SendTo          *string                 `json:"sendTo,omitempty"` // ✅ NEW
+	PurchasePrice   *float64                `json:"purchasePrice,omitempty"`
 }
 
 // SalesPOResponse is what you might send back to the frontend.
