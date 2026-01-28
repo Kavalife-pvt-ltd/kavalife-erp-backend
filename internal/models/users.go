@@ -31,6 +31,7 @@ type LoginRequest struct {
 type LoggedUserDetails struct {
 	ID             int     `json:"id"`
 	Username       string  `json:"username"`
+	Name           string  `json:"name"`
 	Role           string  `json:"role"`
 	Department     string  `json:"department"`
 	DepartmentRole *string `json:"departmentRole,omitempty"`

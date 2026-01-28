@@ -18,7 +18,7 @@ func Routes(r *gin.Engine) {
 
 	apiRoutes.POST("/login", services.UserLogin)
 	apiRoutes.GET("/checkUser", services.CheckUser)
-	apiRoutes.POST("createNewUser", services.CreateNewUser)
+	apiRoutes.POST("/createNewUser", services.CreateNewUser)
 
 	// apiRoutes.POST("/logout", services.Logout)
 
