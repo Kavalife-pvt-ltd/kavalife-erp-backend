@@ -634,59 +634,58 @@ func ListSalesPO(ctx context.Context, filter SalesPOFilter) ([]models.SalesPO, e
 
 func isValidStatusTransition(from, to models.SalesPOStatus) bool {
 	allowed := map[models.SalesPOStatus][]models.SalesPOStatus{
-		// ── Creation → admin review ─────────────────────────────
 		models.StatusQuoteRequested: {
-			models.StatusRoutedToPurchase,   // admin sends to purchase
-			models.StatusRoutedToProduction, // admin sends to production
-			models.StatusAdminRejected,      // admin rejects back to sales
+			models.StatusRoutedToPurchase,
+			models.StatusRoutedToProduction,
+			models.StatusAdminRejected,
 			models.StatusCancelled,
 		},
 
-		// ── Admin pricing review (after sales pricing) ─────────
-		// "quote_admin_approved" = pricing ready & admin signed off
+		models.StatusRoutedToPurchase: {
+			models.StatusPurchasePriced, // ✅ purchase submits price
+			models.StatusCancelled,
+		},
+
+		models.StatusPurchasePriced: {
+			models.StatusPurchaseApproved, // ✅ admin approves price
+			models.StatusAdminRejected,
+			models.StatusCancelled,
+		},
+
+		models.StatusPurchaseApproved: {
+			models.StatusPurchaseCompleted, // ✅ purchase marks completed
+			models.StatusCancelled,
+		},
+
+		models.StatusRoutedToProduction: {
+			models.StatusProductionCompleted,
+			models.StatusCancelled,
+		},
+
+		models.StatusPurchaseCompleted: {
+			models.StatusQuoteAdminApproved,
+			models.StatusCancelled,
+		},
+
+		models.StatusProductionCompleted: {
+			models.StatusFinalAdminApproved,
+			models.StatusAdminRejected,
+			models.StatusCancelled,
+		},
+
 		models.StatusQuoteAdminApproved: {
 			models.StatusFinalAdminApproved,
 			models.StatusAdminRejected,
 			models.StatusCancelled,
 		},
 
-		// ── Initial routing to ops ─────────────────────────────
-		models.StatusRoutedToPurchase: {
-			models.StatusPurchaseCompleted, // purchase completed & sent back
-			models.StatusCancelled,
-		},
-		models.StatusRoutedToProduction: {
-			models.StatusProductionCompleted, // production completed & sent back
-			models.StatusCancelled,
-		},
+		models.StatusFinalAdminApproved: {models.StatusCancelled},
 
-		// ── Ops → back to admin / sales ───────────────────────
-		models.StatusPurchaseCompleted: {
-			// Purchase → Sales adds pricing → Admin final review
-			models.StatusQuoteAdminApproved, // sales sends for final admin approval
-			models.StatusCancelled,
-		},
-		models.StatusProductionCompleted: {
-			// Directly to admin final sign-off
-			models.StatusFinalAdminApproved,
-			models.StatusAdminRejected,
-			models.StatusCancelled,
-		},
-
-		// ── Final stage ────────────────────────────────────────
-		models.StatusFinalAdminApproved: {
-			// usually terminal – but you *could* allow cancellation here
-			models.StatusCancelled,
-		},
-
-		// ── Rejection / reopen ─────────────────────────────────
 		models.StatusAdminRejected: {
-			// allow sales to fix & resubmit
 			models.StatusQuoteRequested,
 			models.StatusCancelled,
 		},
 
-		// ── Client-side statuses if you ever use them ─────────
 		models.StatusClientRejected: {},
 	}
 
@@ -745,6 +744,11 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 	if req.NewAskingPrice != nil {
 		setParts = append(setParts, fmt.Sprintf("asking_price = $%d", argPos))
 		args = append(args, *req.NewAskingPrice)
+		argPos++
+	}
+	if req.PurchasePrice != nil {
+		setParts = append(setParts, fmt.Sprintf("purchase_price = $%d", argPos))
+		args = append(args, *req.PurchasePrice)
 		argPos++
 	}
 	if req.NewComments != nil {
@@ -815,35 +819,33 @@ func UpdateSalesPOStatus(ctx context.Context, req models.UpdateSalesPOStatusRequ
 
 	switch toStatus {
 	case models.StatusQuoteRequested:
-		// Sales (or re-opened) → Admin review
 		autoSendTo = "admin"
 
 	case models.StatusRoutedToPurchase:
-		// Admin → Purchase
 		autoSendTo = "purchase"
 
-	case models.StatusRoutedToProduction:
-		// Admin → Production
-		autoSendTo = "production"
+	case models.StatusPurchasePriced:
+		autoSendTo = "admin" // ✅ admin must approve price next
+
+	case models.StatusPurchaseApproved:
+		autoSendTo = "purchase" // ✅ now purchase executes buying
 
 	case models.StatusPurchaseCompleted:
-		// Purchase → admin (pricing / follow-up)
-		autoSendTo = "admin"
+		autoSendTo = "sales" // ✅ goes back to sales (your requirement)
+
+	case models.StatusRoutedToProduction:
+		autoSendTo = "production"
 
 	case models.StatusProductionCompleted:
-		// Production → Admin (final sign-off)
 		autoSendTo = "admin"
 
 	case models.StatusQuoteAdminApproved:
-		// Sales sends pricing for final admin approval
 		autoSendTo = "admin"
 
 	case models.StatusFinalAdminApproved:
-		// After final approval, Sales owns it
 		autoSendTo = "sales"
 
 	case models.StatusAdminRejected:
-		// Any rejection → Sales to revisit
 		autoSendTo = "sales"
 	}
 
