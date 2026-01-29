@@ -124,12 +124,14 @@ func AllNewUsersList(c *gin.Context) {
 	utils.SuccessWithData(c, data)
 }
 func checkUserExists(ctx context.Context, username, phone string) error {
-	log.Println(username, "----", phone)
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		user, err := handlers.GetUserByUsername(ctx, username)
 		if err != nil {
+			if err.Error() == "no rows found" {
+				return nil
+			}
 			return err
 		}
 		if user != nil {
@@ -141,6 +143,9 @@ func checkUserExists(ctx context.Context, username, phone string) error {
 	g.Go(func() error {
 		user, err := handlers.GetUserByPhoneNum(ctx, phone)
 		if err != nil {
+			if err.Error() == "no rows found" {
+				return nil
+			}
 			return err
 		}
 		if user != nil {
@@ -151,6 +156,7 @@ func checkUserExists(ctx context.Context, username, phone string) error {
 
 	return g.Wait()
 }
+
 func ApproveNewUser(c *gin.Context) {
 	var req models.ApproveNewUsers
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -189,7 +195,10 @@ func ApproveNewUser(c *gin.Context) {
 	}
 	// log.Println("------", newUser)
 	//find username and number in users if found then return with already exists
-	err = checkUserExists(c, newUser.Username, newUser.Mobile)
+	if err := checkUserExists(c, newUser.Username, newUser.Mobile); err != nil {
+		utils.SuccessWithError(c, err)
+		return
+	}
 
 	if err != nil && err.Error() != "no rows in result set" {
 		utils.SuccessWithError(c, err)

@@ -94,8 +94,8 @@ func GetUserByPhoneNum(ctx context.Context, phoneNo string) (*models.User, error
 func GetLoggedUserByUsername(ctx context.Context, username string) (*models.LoggedUserDetails, error) {
 	var user models.LoggedUserDetails
 
-	query := `SELECT id, username, role , department FROM public.users WHERE username = $1`
-	err := db.DB.QueryRow(ctx, query, username).Scan(&user.ID, &user.Username, &user.Role, &user.Department)
+	query := `SELECT id, username, name, role , department FROM public.users WHERE username = $1`
+	err := db.DB.QueryRow(ctx, query, username).Scan(&user.ID, &user.Username, &user.Name, &user.Role, &user.Department)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
