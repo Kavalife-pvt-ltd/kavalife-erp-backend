@@ -129,9 +129,6 @@ func checkUserExists(ctx context.Context, username, phone string) error {
 	g.Go(func() error {
 		user, err := handlers.GetUserByUsername(ctx, username)
 		if err != nil {
-			if err.Error() == "no rows found" {
-				return nil
-			}
 			return err
 		}
 		if user != nil {
@@ -143,9 +140,6 @@ func checkUserExists(ctx context.Context, username, phone string) error {
 	g.Go(func() error {
 		user, err := handlers.GetUserByPhoneNum(ctx, phone)
 		if err != nil {
-			if err.Error() == "no rows found" {
-				return nil
-			}
 			return err
 		}
 		if user != nil {
@@ -195,10 +189,7 @@ func ApproveNewUser(c *gin.Context) {
 	}
 	// log.Println("------", newUser)
 	//find username and number in users if found then return with already exists
-	if err := checkUserExists(c, newUser.Username, newUser.Mobile); err != nil {
-		utils.SuccessWithError(c, err)
-		return
-	}
+	err = checkUserExists(c, newUser.Username, newUser.Mobile)
 
 	if err != nil && err.Error() != "no rows in result set" {
 		utils.SuccessWithError(c, err)
