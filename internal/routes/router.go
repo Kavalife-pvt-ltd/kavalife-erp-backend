@@ -16,6 +16,7 @@ func Routes(r *gin.Engine) {
 	qaqc := r.Group("/qaqc").Use(AuthMiddleware())
 	salesPORoutes := r.Group("/sales-po").Use(AuthMiddleware()) // 🔹 new
 
+	apiRoutes.GET("/health", Health) //heathcheck
 	apiRoutes.POST("/login", services.UserLogin)
 	apiRoutes.GET("/checkUser", services.CheckUser)
 	apiRoutes.POST("/createNewUser", services.CreateNewUser)
@@ -51,4 +52,21 @@ func Routes(r *gin.Engine) {
 	salesPORoutes.GET("/:id", services.GetSalesPO)
 	salesPORoutes.PATCH("/:id/status", services.UpdateSalesPOStatus)
 	salesPORoutes.GET("/:id/status-log", services.GetSalesPOStatusLog)
+}
+
+type HealthResponse struct {
+	Status string `json:"status" example:"ok"`
+}
+
+// Health godoc
+// @Summary      Health check
+// @Description  Returns service health status
+// @Tags         Health
+// @Produce      json
+// @Success      200 {object} HealthResponse
+// @Router       /api/health [get]
+func Health(c *gin.Context) {
+	c.JSON(200, HealthResponse{
+		Status: "ok",
+	})
 }
