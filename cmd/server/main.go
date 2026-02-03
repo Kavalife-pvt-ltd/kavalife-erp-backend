@@ -12,6 +12,11 @@ import (
 	util "github.com/paaart/kavalife-erp-backend/internal/utils"
 )
 
+// @title           KavaLife ERP API
+// @version         1.0
+// @description     Backend API for KavaLife ERP
+// @host            localhost:8080
+// @BasePath        /
 func main() {
 
 	Log := util.InitLogger()

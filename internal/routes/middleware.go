@@ -3,6 +3,7 @@ package routes
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +12,8 @@ import (
 	"github.com/paaart/kavalife-erp-backend/internal/models"
 
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func RunApp() *gin.Engine {
@@ -18,6 +21,10 @@ func RunApp() *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(GinLoggerMiddleware()) // default logger
 	r.Use(CORSMiddleware())      //CORS might need to update for prod
+
+	r.GET("/", Explorer)                                                 // Explorer (root)
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler)) // Swagger
+
 	Routes(r)
 	return r
 }
@@ -51,6 +58,12 @@ func GinLoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
+
+		//ignoring path / and swagger
+		if path == "/" || strings.HasPrefix(path, "/swagger") {
+			c.Next()
+			return
+		}
 
 		c.Next()
 
