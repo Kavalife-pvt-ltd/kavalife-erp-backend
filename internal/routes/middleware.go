@@ -8,22 +8,25 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paaart/kavalife-erp-backend/internal/db"
-
 	"github.com/paaart/kavalife-erp-backend/internal/models"
-
 	"github.com/paaart/kavalife-erp-backend/internal/utils"
+	"github.com/sirupsen/logrus"
+
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func RunApp() *gin.Engine {
+
+	utils.InitLogger() //Initialize logger ONCE at startup
+
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(GinLoggerMiddleware()) // default logger
-	r.Use(CORSMiddleware())      //CORS might need to update for prod
+	r.Use(GinLoggerMiddleware())
+	r.Use(CORSMiddleware())
 
-	r.GET("/", Explorer)                                                 // Explorer (root)
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler)) // Swagger
+	r.GET("/", Explorer)
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	Routes(r)
 	return r
@@ -59,7 +62,7 @@ func GinLoggerMiddleware() gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 
-		//ignoring path / and swagger
+		// Ignore root and swagger
 		if path == "/" || strings.HasPrefix(path, "/swagger") {
 			c.Next()
 			return
@@ -68,14 +71,20 @@ func GinLoggerMiddleware() gin.HandlerFunc {
 		c.Next()
 
 		latency := time.Since(start)
-		l := utils.InitLogger()
-		l.WithFields(map[string]any{
-			"status":   c.Writer.Status(),
-			"method":   c.Request.Method,
-			"path":     path,
-			"latency":  latency,
-			"clientIP": c.ClientIP(),
-		}).Info("Request processed")
+
+		entry := utils.Log.WithFields(logrus.Fields{
+			"status":    c.Writer.Status(),
+			"method":    c.Request.Method,
+			"path":      path,
+			"latency":   latency.Milliseconds(),
+			"client_ip": c.ClientIP(),
+		})
+
+		if len(c.Errors) > 0 {
+			entry.Error(c.Errors.String())
+		} else {
+			entry.Info("request completed")
+		}
 	}
 }
 
@@ -83,20 +92,32 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userId, err := c.Cookie("usrCookie")
 		if err != nil {
-			// Cookie is missing or expired
 			utils.StatusUnauthorized(c, errors.New("session expired or not logged in"))
 			c.Abort()
 			return
 		}
-		jwtValidate, bool := utils.ValidateJWT(userId)
-		if !bool {
+
+		jwtValidate, ok := utils.ValidateJWT(userId)
+		if !ok {
 			utils.StatusUnauthorized(c, errors.New("user not valid"))
 			c.Abort()
 			return
 		}
+
 		var user models.User
-		err = db.DB.QueryRow(c, `SELECT id, username, role, department, department_role FROM public.users WHERE id=$1`, jwtValidate["id"]).
-			Scan(&user.ID, &user.Username, &user.Role, &user.Department, &user.DepartmentRole)
+		err = db.DB.QueryRow(
+			c,
+			`SELECT id, username, role, department, department_role 
+			 FROM public.users WHERE id=$1`,
+			jwtValidate["id"],
+		).Scan(
+			&user.ID,
+			&user.Username,
+			&user.Role,
+			&user.Department,
+			&user.DepartmentRole,
+		)
+
 		if err == sql.ErrNoRows {
 			utils.StatusUnauthorized(c, errors.New("invalid username or password"))
 			c.Abort()
@@ -112,6 +133,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("user_id", user.ID)
 		c.Set("role", user.Role)
 		c.Set("department", user.Department)
+
 		c.Next()
 	}
 }
