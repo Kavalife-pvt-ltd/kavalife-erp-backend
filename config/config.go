@@ -22,7 +22,7 @@ func ConfigLoader() Config {
 		Port:       getEnv("PORT", "8080"),
 		DB_URL:     getEnv("DB_URL", ""),
 		JWT_SECRET: getEnv("JWT_SECRET", ""),
-		APP_ENV:    getEnv("JWT_SECRET", "dev"),
+		APP_ENV:    getEnv("APP_ENV", "dev"),
 	}
 
 	if cfg.JWT_SECRET == "" {
